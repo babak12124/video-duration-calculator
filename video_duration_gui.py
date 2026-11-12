@@ -629,6 +629,7 @@ class MainWindow(QMainWindow):
         self.cancel_event = threading.Event()
         self.status_key: str | None = "ready"
         self.status_args: dict = {}
+        self.scanning = False
 
         self.setMinimumSize(860, 660)
         self.resize(1040, 820)
@@ -1147,6 +1148,7 @@ class MainWindow(QMainWindow):
         self._show_status(self.s["discovering"].format(count=0), "discovering", count=0)
 
         self.cancel_event.clear()
+        self.scanning = True
         include = next(
             value for value, radio in self.radios.items() if radio.isChecked()
         )
@@ -1197,9 +1199,12 @@ class MainWindow(QMainWindow):
         self.counts = result["counts"]
         self.scanned_folders = len(result["folders"])
 
+        self.folder_stats = build_folder_stats(self.rows, result["folders"])
+
         self._refresh_table()
         self._refresh_totals()
         self._refresh_summary()
+        self._refresh_folder_tree()
 
         if result["cancelled"]:
             self._show_status(self.s["cancelled"], "cancelled")
@@ -1233,6 +1238,7 @@ class MainWindow(QMainWindow):
             thread.deleteLater()
 
     def _reset_controls(self) -> None:
+        self.scanning = False
         self.btn_scan.setEnabled(True)
         self.btn_cancel.hide()
         self.progress.hide()
@@ -1242,6 +1248,7 @@ class MainWindow(QMainWindow):
     def cancel_scan(self) -> None:
         if self.scan_thread and self.scan_thread.isRunning():
             self.cancel_event.set()
+            self.scanning = False
             self._show_status(self.s["cancelled"], "cancelled")
 
     # -- rendering --------------------------------------------------------- #
