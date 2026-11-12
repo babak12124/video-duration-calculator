@@ -1,0 +1,173 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install PySide6 pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --noconsole --onefile video_duration_gui.py --name video-duration-calculator-win --clean
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-duration-calculator-windows
+          path: dist/video-duration-calculator-win.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip python3-venv ffmpeg libgl1-mesa-glx
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install PySide6 pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --noconsole --onefile video_duration_gui.py --name video-duration-calculator-linux --clean
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-duration-calculator-linux
+          path: dist/video-duration-calculator-linux
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install ffmpeg python@3.11
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install PySide6 pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --noconsole --onefile video_duration_gui.py --name video-duration-calculator-macos --clean
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-duration-calculator-macos
+          path: dist/video-duration-calculator-macos
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: video-duration-calculator-windows
+          path: artifacts/windows
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: video-duration-calculator-linux
+          path: artifacts/linux
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: video-duration-calculator-macos
+          path: artifacts/macos
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          cp artifacts/windows/video-duration-calculator-win.exe release/video-duration-calculator-${{ github.ref_name }}-windows.exe
+          cp artifacts/linux/video-duration-calculator-linux release/video-duration-calculator-${{ github.ref_name }}-linux
+          cp artifacts/macos/video-duration-calculator-macos release/video-duration-calculator-${{ github.ref_name }}-macos
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Video & Audio Duration Calculator ${{ github.ref_name }}
+            
+            ### Features
+            - **Graphical interface (PySide6/Qt 6)** — drag & drop folders, choose video/audio/both, live progress bar, cancel anytime
+            - **Persian & English UI** — one-click switch with RTL layout, remembers your choice
+            - **Folder tree with per-type breakdown** — shows total, video, audio duration and file count per folder (including subfolders)
+            - **Folder size column** — human-readable sizes (GB/MB/KB) aggregated recursively
+            - **Dark/Light theme** — toggle with ☀/🌙 button, persisted across sessions
+            - **Auto ffprobe detection** — finds FFmpeg on PATH or common install locations; one-time prompt if missing
+            - **CSV export** — detailed report saved next to the executable
+            - **Portable single-file executables** — no Python or dependencies needed on user's machine
+            
+            ### Supported formats
+            **Video:** mp4, mkv, avi, mov, wmv, flv, webm, m4v, ts, mts, m2ts, vob, ogv, 3gp, 3g2, f4v, divx, xvid, rmvb, asf, mxf
+            
+            **Audio:** mp3, m4a, aac, wav, flac, ogg, opus, wma, aiff, aif, ape, alac, amr, ac3, dts, mp2
+            
+            ### Downloads
+            - `video-duration-calculator-${{ github.ref_name }}-windows.exe` — Windows 10/11 (64-bit)
+            - `video-duration-calculator-${{ github.ref_name }}-linux` — Linux (glibc, 64-bit)
+            - `video-duration-calculator-${{ github.ref_name }}-macos` — macOS 11+ (Intel & Apple Silicon)
+            
+            ### Requirements
+            - **Windows/Linux/macOS**: No installation needed — just download and run
+            - **FFmpeg (ffprobe)** must be installed and on PATH for duration reading
+              - Windows: `winget install Gyan.FFmpeg`
+              - Linux: `sudo apt install ffmpeg` / `sudo dnf install ffmpeg`
+              - macOS: `brew install ffmpeg`
+          files: |
+            release/video-duration-calculator-${{ github.ref_name }}-windows.exe
+            release/video-duration-calculator-${{ github.ref_name }}-linux
+            release/video-duration-calculator-${{ github.ref_name }}-macos
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
