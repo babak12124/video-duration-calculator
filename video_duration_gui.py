@@ -119,6 +119,8 @@ STRINGS = {
         "no_files_title": "Nothing found",
         "no_files": "No matching media files were found in the selected folders.",
         "error_title": "Error",
+        "theme_light": "☀ Light",
+        "theme_dark": "🌙 Dark",
         "ffprobe_title": "One-time setup",
         "ffprobe_text": (
             "To read how long each file is, the app uses FFmpeg (a free media tool).\n\n"
@@ -182,6 +184,8 @@ STRINGS = {
         "no_files_title": "چیزی پیدا نشد",
         "no_files": "در پوشه‌های انتخابی فایل ویدیویی یا صوتی پشتیبانی‌شده پیدا نشد.",
         "error_title": "خطا",
+        "theme_light": "☀ روشنی",
+        "theme_dark": "🌙 تاریکی",
         "ffprobe_title": "یک تنظیم یک‌باره",
         "ffprobe_text": (
             "برای خواندن مدت هر فایل، برنامه از FFmpeg (یک ابزار رایگان رسانه) استفاده می‌کند.\n\n"
@@ -282,6 +286,156 @@ def light_palette() -> QPalette:
     for role, value in colors.items():
         palette.setColor(role, QColor(value))
     return palette
+
+
+def dark_palette() -> QPalette:
+    """A fixed dark palette."""
+    palette = QPalette()
+    colors = {
+        QPalette.ColorRole.Window: "#1f2937",
+        QPalette.ColorRole.WindowText: "#f3f4f6",
+        QPalette.ColorRole.Base: "#111827",
+        QPalette.ColorRole.AlternateBase: "#1f2937",
+        QPalette.ColorRole.ToolTipBase: "#111827",
+        QPalette.ColorRole.ToolTipText: "#f3f4f6",
+        QPalette.ColorRole.Text: "#f3f4f6",
+        QPalette.ColorRole.Button: "#374151",
+        QPalette.ColorRole.ButtonText: "#f3f4f6",
+        QPalette.ColorRole.BrightText: "#f87171",
+        QPalette.ColorRole.Highlight: "#166534",
+        QPalette.ColorRole.HighlightedText: "#ffffff",
+        QPalette.ColorRole.PlaceholderText: "#9ca3af",
+    }
+    for role, value in colors.items():
+        palette.setColor(role, QColor(value))
+    return palette
+
+
+LIGHT_STYLE = """
+QWidget { color: #111827; }
+QWidget#Central { background: #f5f6f8; }
+QLabel#Title { color: #111827; font-size: 18pt; font-weight: 700; }
+QLabel#Tagline { color: #6b7280; font-size: 9pt; }
+QLabel#SectionTitle { color: #374151; font-size: 10pt; font-weight: 600; }
+QLabel#Hint { color: #6b7280; font-size: 9pt; }
+QLabel#StatTitle { color: #166534; font-size: 9pt; font-weight: 600; }
+QLabel#StatValue { color: #15803d; font-size: 19pt; font-weight: 700; }
+QLabel#StatSub { color: #4b5563; font-size: 9pt; }
+
+QFrame#Card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; }
+QFrame#StatCard { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; }
+
+QTreeWidget {
+    background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px;
+    alternate-background-color: #fbfcfd;
+}
+QTreeWidget::item { padding: 3px 4px; border-radius: 4px; color: #111827; }
+QTreeWidget::item:selected { background: #dcfce7; color: #14532d; }
+
+QPushButton {
+    background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 6px 14px; color: #111827;
+}
+QPushButton:hover { background: #f3f4f6; }
+QPushButton:pressed { background: #e5e7eb; }
+QPushButton:disabled { color: #9ca3af; border-color: #e5e7eb; }
+QPushButton#Primary {
+    background: #15803d; border: none; color: #ffffff;
+    font-weight: 600; padding: 8px 22px;
+}
+QPushButton#Primary:hover { background: #166534; }
+QPushButton#Primary:disabled { background: #86efac; }
+
+QRadioButton { color: #111827; spacing: 6px; }
+
+QProgressBar { border: none; border-radius: 6px; background: #e5e7eb; max-height: 12px; }
+QProgressBar::chunk { background: #22c55e; border-radius: 6px; }
+
+QTableWidget {
+    background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;
+    alternate-background-color: #f9fafb; color: #111827;
+    selection-background-color: #dcfce7; selection-color: #111827;
+}
+QHeaderView::section {
+    background: #f9fafb; color: #374151; border: none;
+    border-bottom: 1px solid #e5e7eb; padding: 6px 8px; font-weight: 600;
+}
+QTableWidget::item { padding: 2px 6px; }
+
+QScrollBar:vertical { background: #ffffff; width: 10px; margin: 0; border: none; }
+QScrollBar::handle:vertical { background: #d1d5db; border-radius: 5px; min-height: 24px; }
+QScrollBar::handle:vertical:hover { background: #9ca3af; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+
+QToolTip {
+    background: #111827; color: #ffffff; border: none;
+    padding: 4px 8px; border-radius: 4px;
+}
+"""
+
+DARK_STYLE = """
+QWidget { color: #f3f4f6; }
+QWidget#Central { background: #111827; }
+QLabel#Title { color: #f3f4f6; font-size: 18pt; font-weight: 700; }
+QLabel#Tagline { color: #9ca3af; font-size: 9pt; }
+QLabel#SectionTitle { color: #d1d5db; font-size: 10pt; font-weight: 600; }
+QLabel#Hint { color: #9ca3af; font-size: 9pt; }
+QLabel#StatTitle { color: #4ade80; font-size: 9pt; font-weight: 600; }
+QLabel#StatValue { color: #22c55e; font-size: 19pt; font-weight: 700; }
+QLabel#StatSub { color: #9ca3af; font-size: 9pt; }
+
+QFrame#Card { background: #1f2937; border: 1px solid #374151; border-radius: 10px; }
+QFrame#StatCard { background: #14532d; border: 1px solid #166534; border-radius: 10px; }
+
+QTreeWidget {
+    background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 4px;
+    alternate-background-color: #111827;
+}
+QTreeWidget::item { padding: 3px 4px; border-radius: 4px; color: #f3f4f6; }
+QTreeWidget::item:selected { background: #166534; color: #ffffff; }
+
+QPushButton {
+    background: #374151; border: 1px solid #4b5563; border-radius: 8px;
+    padding: 6px 14px; color: #f3f4f6;
+}
+QPushButton:hover { background: #4b5563; }
+QPushButton:pressed { background: #374151; }
+QPushButton:disabled { color: #6b7280; border-color: #374151; }
+QPushButton#Primary {
+    background: #15803d; border: none; color: #ffffff;
+    font-weight: 600; padding: 8px 22px;
+}
+QPushButton#Primary:hover { background: #166534; }
+QPushButton#Primary:disabled { background: #166534; }
+
+QRadioButton { color: #f3f4f6; spacing: 6px; }
+
+QProgressBar { border: none; border-radius: 6px; background: #374151; max-height: 12px; }
+QProgressBar::chunk { background: #22c55e; border-radius: 6px; }
+
+QTableWidget {
+    background: #1f2937; border: 1px solid #374151; border-radius: 8px;
+    alternate-background-color: #111827; color: #f3f4f6;
+    selection-background-color: #166534; selection-color: #ffffff;
+}
+QHeaderView::section {
+    background: #374151; color: #d1d5db; border: none;
+    border-bottom: 1px solid #4b5563; padding: 6px 8px; font-weight: 600;
+}
+QTableWidget::item { padding: 2px 6px; }
+
+QScrollBar:vertical { background: #1f2937; width: 10px; margin: 0; border: none; }
+QScrollBar::handle:vertical { background: #4b5563; border-radius: 5px; min-height: 24px; }
+QScrollBar::handle:vertical:hover { background: #6b7280; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+
+QToolTip {
+    background: #374151; color: #f3f4f6; border: none;
+    padding: 4px 8px; border-radius: 4px;
+}
+"""
 
 
 # --------------------------------------------------------------------------- #
@@ -628,6 +782,7 @@ class MainWindow(QMainWindow):
         self.settings = load_settings()
         saved_lang = self.settings.get("lang")
         self.lang = saved_lang if saved_lang in STRINGS else default_language()
+        self.theme = self.settings.get("theme", "light")  # "light" or "dark"
         self.s = STRINGS[self.lang]
 
         self.folders: list[str] = []
@@ -654,6 +809,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._apply_language()
+        self._apply_theme()
 
         for folder in list(initial_folders) + list(self.settings.get("folders") or []):
             self._add_folder_path(folder)
@@ -681,6 +837,11 @@ class MainWindow(QMainWindow):
         title_box.addWidget(self.lbl_tagline)
         header.addLayout(title_box)
         header.addStretch(1)
+        self.btn_theme = QPushButton()
+        self.btn_theme.setObjectName("ThemeSwitch")
+        self.btn_theme.setFixedWidth(104)
+        self.btn_theme.clicked.connect(self.toggle_theme)
+        header.addWidget(self.btn_theme, 0, Qt.AlignmentFlag.AlignTop)
         self.btn_lang = QPushButton()
         self.btn_lang.setObjectName("LangSwitch")
         self.btn_lang.setFixedWidth(104)
@@ -938,12 +1099,13 @@ class MainWindow(QMainWindow):
             else:
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.btn_open_csv.setText(s["open_csv"])
+        self.btn_theme.setText(s["theme_dark"] if self.theme == "light" else s["theme_light"])
 
         self.tree_folders.setHeaderLabels(
             [s["col_folder"], s["col_total"], s["col_video"], s["col_audio"], s["col_files"], s["col_size"]]
         )
 
-        self.setStyleSheet(STYLE)
+        self._apply_theme()
         self._refresh_folder_tree()
         self._refresh_totals()
         self._refresh_summary()
@@ -954,6 +1116,23 @@ class MainWindow(QMainWindow):
         self.status_key = key
         self.status_args = kwargs
         self.lbl_status.setText(text)
+
+    def _apply_theme(self) -> None:
+        """Apply the current theme (light/dark) to the application."""
+        app = QApplication.instance()
+        if self.theme == "dark":
+            app.setPalette(dark_palette())
+            self.setStyleSheet(DARK_STYLE)
+        else:
+            app.setPalette(light_palette())
+            self.setStyleSheet(LIGHT_STYLE)
+
+    def toggle_theme(self) -> None:
+        self.theme = "dark" if self.theme == "light" else "light"
+        self._apply_theme()
+        self._apply_language()  # Updates button text
+        self.settings["theme"] = self.theme
+        save_settings(self.settings)
 
     # -- folders ----------------------------------------------------------- #
 
@@ -1360,6 +1539,7 @@ class MainWindow(QMainWindow):
             self.scan_thread.wait(3000)
         self.settings["folders"] = list(self.folders)
         self.settings["lang"] = self.lang
+        self.settings["theme"] = self.theme
         if self.ffprobe:
             self.settings["ffprobe"] = self.ffprobe
         save_settings(self.settings)
