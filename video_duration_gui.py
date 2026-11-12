@@ -81,7 +81,9 @@ STRINGS = {
         "folders_added": "{count} folder(s) added.",
         "folder_inside": "“{name}” is already inside “{root}”, so it will appear in that tree.",
         "col_folder": "Folder",
-        "col_time": "Duration",
+        "col_total": "Total",
+        "col_video": "Video",
+        "col_audio": "Audio",
         "col_files": "Files",
         "mode": "Count",
         "mode_both": "Video + audio",
@@ -141,7 +143,9 @@ STRINGS = {
         "folders_added": "{count} پوشه اضافه شد.",
         "folder_inside": "«{name}» داخل «{root}» است، پس در همان درخت نمایش داده می‌شود.",
         "col_folder": "پوشه",
-        "col_time": "مدت",
+        "col_total": "مجموع",
+        "col_video": "ویدیو",
+        "col_audio": "صدا",
         "col_files": "فایل‌ها",
         "mode": "شمارش",
         "mode_both": "ویدیو + صدا",
@@ -447,8 +451,8 @@ def build_folder_stats(rows, roots) -> dict:
     """Aggregate per-folder durations for the folder tree.
 
     Returns {root_path: node} where each node is
-    {"path", "seconds", "files", "children": {path: node}}. A node's seconds and
-    files include everything in its subtree, so a parent shows the total.
+    {"path", "seconds", "video_seconds", "audio_seconds", "files", "children": {path: node}}.
+    A node's values include everything in its subtree, so a parent shows the total.
     """
     nodes: dict[str, dict] = {}
 
@@ -456,7 +460,7 @@ def build_folder_stats(rows, roots) -> dict:
         key = os.path.normcase(path)
         node = nodes.get(key)
         if node is None:
-            node = {"path": path, "seconds": 0.0, "files": 0, "children": {}}
+            node = {"path": path, "seconds": 0.0, "video_seconds": 0.0, "audio_seconds": 0.0, "files": 0, "children": {}}
             nodes[key] = node
         return node
 
@@ -466,6 +470,8 @@ def build_folder_stats(rows, roots) -> dict:
         if row["seconds"] is None:
             continue
         parent = os.path.dirname(os.path.abspath(row["path"]))
+        kind = row["kind"]
+        seconds = row["seconds"]
 
         root_path = None
         current = parent
@@ -484,7 +490,11 @@ def build_folder_stats(rows, roots) -> dict:
         current = parent
         while True:
             node = node_for(current)
-            node["seconds"] += row["seconds"]
+            node["seconds"] += seconds
+            if kind == "Video":
+                node["video_seconds"] += seconds
+            else:
+                node["audio_seconds"] += seconds
             node["files"] += 1
             if os.path.normcase(current) == os.path.normcase(root_path):
                 break
@@ -674,7 +684,7 @@ class MainWindow(QMainWindow):
         folders_row = QHBoxLayout()
         folders_row.setSpacing(8)
         self.tree_folders = QTreeWidget()
-        self.tree_folders.setColumnCount(3)
+        self.tree_folders.setColumnCount(5)
         self.tree_folders.setFixedHeight(150)
         self.tree_folders.setRootIsDecorated(True)
         self.tree_folders.setUniformRowHeights(True)
@@ -686,8 +696,12 @@ class MainWindow(QMainWindow):
         tree_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tree_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         tree_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        tree_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        tree_header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         self.tree_folders.setColumnWidth(1, 100)
-        self.tree_folders.setColumnWidth(2, 70)
+        self.tree_folders.setColumnWidth(2, 90)
+        self.tree_folders.setColumnWidth(3, 90)
+        self.tree_folders.setColumnWidth(4, 70)
         self.tree_folders.itemSelectionChanged.connect(self._on_folder_selection_changed)
         folders_row.addWidget(self.tree_folders, 1)
 
@@ -902,6 +916,10 @@ class MainWindow(QMainWindow):
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.btn_open_csv.setText(s["open_csv"])
 
+        self.tree_folders.setHeaderLabels(
+            [s["col_folder"], s["col_total"], s["col_video"], s["col_audio"], s["col_files"]]
+        )
+
         self.setStyleSheet(STYLE)
         self._refresh_folder_tree()
         self._refresh_totals()
@@ -969,19 +987,30 @@ class MainWindow(QMainWindow):
         self._on_folder_selection_changed()
 
     def _make_folder_item(self, path, label, node, icon, top=False) -> QTreeWidgetItem:
-        seconds = node["seconds"] if node else 0.0
-        duration = format_hms(seconds) if node and seconds > 0 else ("—" if node else "")
-        files = str(node["files"]) if node else ""
-        item = QTreeWidgetItem([label, duration, files])
+        if node:
+            total_sec = node["seconds"]
+            video_sec = node.get("video_seconds", 0.0)
+            audio_sec = node.get("audio_seconds", 0.0)
+            files = node["files"]
+            total_str = format_hms(total_sec) if total_sec > 0 else "—"
+            video_str = format_hms(video_sec) if video_sec > 0 else "—"
+            audio_str = format_hms(audio_sec) if audio_sec > 0 else "—"
+            files_str = str(files)
+        else:
+            total_str = video_str = audio_str = "—"
+            files_str = ""
+        item = QTreeWidgetItem([label, total_str, video_str, audio_str, files_str])
         item.setToolTip(0, path)
         item.setIcon(0, icon)
         item.setData(0, Qt.ItemDataRole.UserRole, path)
         item.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
         item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
+        item.setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
+        item.setTextAlignment(4, Qt.AlignmentFlag.AlignCenter)
         if top:
             font = item.font(0)
             font.setBold(True)
-            for column in range(3):
+            for column in range(5):
                 item.setFont(column, font)
         if node:
             children = sorted(
