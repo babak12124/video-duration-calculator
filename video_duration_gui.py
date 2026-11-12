@@ -722,6 +722,9 @@ class MainWindow(QMainWindow):
         self.tree_folders.setColumnWidth(3, 90)
         self.tree_folders.setColumnWidth(4, 70)
         self.tree_folders.setColumnWidth(5, 100)
+        # Center-align header for numeric columns (1-5)
+        for col in range(1, 6):
+            tree_header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
         self.tree_folders.itemSelectionChanged.connect(self._on_folder_selection_changed)
         folders_row.addWidget(self.tree_folders, 1)
 
