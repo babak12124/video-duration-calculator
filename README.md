@@ -25,6 +25,7 @@ A tiny, dependency-light Windows script that walks one or more folder trees, rea
 - [How It Works](#how-it-works)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
+- [Changelog](#changelog)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -81,13 +82,17 @@ ffprobe -version
 
 ## Installation
 
-1. Download [`video_duration.bat`](video_duration.bat) (or clone the repo).
-2. Put it anywhere — Desktop, `D:\Tools`, a network share.
+1. Download **both** files from the [latest release](https://github.com/babak12124/video-duration-calculator/releases/latest) (or clone the repo):
+   - [`video_duration.bat`](video_duration.bat) — the launcher you double-click
+   - [`video_duration.ps1`](video_duration.ps1) — the actual logic
+2. Put them in the **same folder** — Desktop, `D:\Tools`, a network share.
 3. That's it. No installer, no admin rights required.
 
 ```powershell
 git clone https://github.com/babak12124/video-duration-calculator.git
 ```
+
+> ℹ️ Files downloaded from the internet carry a "mark of the web" that some antivirus tools treat suspiciously. If Windows blocks the script, right-click the file **→ Properties → Unblock**, or run `Unblock-File .\video_duration.*`. Nothing is hidden: both files are plain text you can read.
 
 ## Usage
 
@@ -137,20 +142,23 @@ CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 
 `.mp4` · `.mkv` · `.avi` · `.mov` · `.wmv` · `.flv` · `.webm` · `.m4v` · `.mpg` · `.mpeg` · `.ts` · `.3gp`
 
-Matching is case-insensitive (`Movie.MP4` counts). `ffprobe` can read many more containers — to support another format, add its extension to the `$ext` line near the top of the PowerShell block inside the script.
+Matching is case-insensitive (`Movie.MP4` counts). `ffprobe` can read many more containers — to support another format, add its extension to the `$extensions` array at the top of [`video_duration.ps1`](video_duration.ps1).
 
 ## How It Works
 
-The `.bat` is a hybrid file: the Batch part re-launches itself through PowerShell, extracting everything after the `#PSSTART` marker and running it. Then it:
+The launcher is deliberately boring: `video_duration.bat` starts `video_duration.ps1` with `-NoProfile -ExecutionPolicy Bypass`, passes along any arguments (that's how drag & drop works), shows a readable error if the exit code is non-zero, and **always** waits for a keypress so the window can never vanish. The PowerShell script then:
 
-1. Locates `ffprobe` on `PATH` (or asks for its path).
-2. Recursively enumerates every chosen folder for the extensions above, de-duplicating files that appear in overlapping paths.
-3. For each file, runs:
+1. Locates `ffprobe` on `PATH` (or in the usual WinGet/FFmpeg folders, or asks for its path).
+2. Resolves the folder arguments, skipping invalid ones with a warning.
+3. Recursively enumerates every chosen folder for the extensions above, de-duplicating files that appear in overlapping paths.
+4. For each file, runs:
    ```text
    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i "<file>"
    ```
-4. Parses the duration using **invariant culture** (so `1.5` is never misread as `15` on regional settings), ignoring zero/negative/NaN values.
-5. Sums the seconds, converts to `hours`/`minutes`/`h:mm:ss`, and writes the per-file CSV.
+5. Parses the duration using **invariant culture** (so `1.5` is never misread as `15` on regional settings), ignoring zero/negative/NaN/infinite values.
+6. Sums the seconds, converts to `hours`/`minutes`/`h:mm:ss`, and writes the per-file CSV.
+
+Errors are caught, printed in red, and appended to `video_duration-error.log` next to the script, so a failed run always leaves a breadcrumb instead of closing silently.
 
 Everything is local. No network access, no data collection.
 
@@ -159,11 +167,13 @@ Everything is local. No network access, no data collection.
 | Symptom | Fix |
 |---|---|
 | `ffprobe was not found in PATH.` | Install FFmpeg (see above), or paste the full path to `ffprobe.exe` when asked. |
-| `Folder not found.` | Check the path. Use quotes for paths with spaces. |
-| `No video files found.` | Confirm the folder has supported extensions; the scan is recursive, so subfolders are included. |
+| `video_duration.ps1 was not found next to this file.` | The two files were separated. Keep `video_duration.bat` and `video_duration.ps1` in the same folder. |
+| `None of the given folders exist.` | Check the path. Use quotes for paths with spaces; separate several paths with `;`. |
+| `No video files were found in the selected folder(s).` | Confirm the folder has supported extensions; the scan is recursive, so subfolders are included. |
 | Some files listed as unreadable | The file is corrupt, still being downloaded, or uses an exotic codec/container. `ffprobe` prints the reason with `-v error`. |
-| Total looks wrong | Rounded to the nearest minute by design. Themes/regional settings cannot break parsing — the script uses invariant culture. |
-| Window closes instantly | Run it from a terminal (`cmd` → drag the `.bat` in → Enter) to see the error. |
+| Total looks wrong | Rounded to the nearest minute by design; the exact `h:mm:ss` is printed next to it. Regional settings cannot break parsing — invariant culture is used. |
+| Antivirus or SmartScreen blocked it | Right-click the files → **Properties → Unblock**, or run `Unblock-File .\video_duration.*`. Both files are plain text; nothing is obfuscated. |
+| Window still closes instantly | Almost always the browser/antivirus killing the process. Run it from a terminal (`cmd` → drag the `.bat` in → Enter) and check `video_duration-error.log` next to the script; open an [issue](https://github.com/babak12124/video-duration-calculator/issues) with that log. |
 
 ## FAQ
 
@@ -181,6 +191,20 @@ Yes. Each run writes `video_durations-<timestamp>.csv` next to the script (falls
 
 **Why is the total rounded to minutes?**
 Because that's how humans quote viewing time (“96 hours, 12 minutes”). The exact `h:mm:ss` and total seconds are printed right below it.
+
+## Changelog
+
+### v1.1.0 — bug fix
+
+- **Fixed:** on some machines the window opened and closed instantly. The old `.bat` re-launched itself and executed an embedded PowerShell payload via `Invoke-Expression` — a pattern antivirus heuristics often kill silently. It is now a plain launcher + a readable `.ps1`.
+- The window now **always** waits for a keypress, and failures print a red message plus a `video_duration-error.log`.
+- Missing `video_duration.ps1`, invalid paths, and empty input are reported instead of failing quietly.
+- `h:mm:ss` no longer wraps at 24 hours (a 30-hour total shows `30:15:22`, not `06:15:22`).
+- Folder prompts retry up to 3 times; `ffprobe` is also auto-detected in the WinGet/FFmpeg install folders.
+
+### v1.0.0 — first release
+
+- Recursive duration total, multi-folder scan, drag & drop, CSV report, bilingual docs.
 
 ## Contributing
 
@@ -220,6 +244,7 @@ Please keep changes small, readable, and dependency-free.
 - [نحوهٔ کار](#نحوهٔ-کار)
 - [رفع مشکل](#رفع-مشکل)
 - [سؤالات متداول](#سؤالات-متداول)
+- [تغییرات نسخه‌ها](#تغییرات-نسخهها)
 - [مشارکت](#مشارکت)
 - [مجوز](#مجوز)
 
@@ -274,13 +299,17 @@ ffprobe -version
 
 ## نصب
 
-1. فایل [`video_duration.bat`](video_duration.bat) را دانلود کنید (یا ریپو را clone کنید).
-2. هر جایی که خواستید بگذارید — دسکتاپ، `D:\Tools`، یا یک درایو شبکه.
+1. **هر دو فایل** را از [آخرین Release](https://github.com/babak12124/video-duration-calculator/releases/latest) دانلود کنید (یا ریپو را clone کنید):
+   - [`video_duration.bat`](video_duration.bat) — فایلی که رویش دابل‌کلیک می‌کنید
+   - [`video_duration.ps1`](video_duration.ps1) — منطق اصلی برنامه
+2. هر دو را در **یک پوشه** بگذارید — دسکتاپ، `D:\Tools`، یا یک درایو شبکه.
 3. تمام. نصب‌کننده و دسترسی ادمین لازم نیست.
 
 ```powershell
 git clone https://github.com/babak12124/video-duration-calculator.git
 ```
+
+> ℹ️ فایل‌های دانلودشده از اینترنت یک نشانهٔ «mark of the web» دارند که برخی آنتی‌ویروس‌ها به آن حساس‌اند. اگر ویندوز اجرا را بلاک کرد، روی فایل راست‌کلیک کنید → **Properties → Unblock**، یا `Unblock-File .\video_duration.*` را اجرا کنید. هیچ چیز پنهانی وجود ندارد: هر دو فایل متن ساده و قابل خواندن‌اند.
 
 ## نحوهٔ استفاده
 
@@ -330,20 +359,23 @@ CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 
 `.mp4` · `.mkv` · `.avi` · `.mov` · `.wmv` · `.flv` · `.webm` · `.m4v` · `.mpg` · `.mpeg` · `.ts` · `.3gp`
 
-تطبیق پسوند به بزرگی/کوچکی حروف حساس نیست (`Movie.MP4` هم حساب می‌شود). `ffprobe` کانتینرهای بیشتری را می‌شناسد؛ برای افزودن فرمت جدید، پسوند را به خط `$ext` در بخش PowerShell اسکریپت اضافه کنید.
+تطبیق پسوند به بزرگی/کوچکی حروف حساس نیست (`Movie.MP4` هم حساب می‌شود). `ffprobe` کانتینرهای بیشتری را می‌شناسد؛ برای افزودن فرمت جدید، پسوند را به آرایهٔ `$extensions` در ابتدای [`video_duration.ps1`](video_duration.ps1) اضافه کنید.
 
 ## نحوهٔ کار
 
-فایل `.bat` یک فایل ترکیبی است: بخش Batch خودش را از طریق PowerShell دوباره اجرا می‌کند و هر چیزی بعد از نشانگر `#PSSTART` را استخراج و اجرا می‌کند. سپس:
+لانچر عمداً ساده است: `video_duration.bat` فایل `video_duration.ps1` را با `-NoProfile -ExecutionPolicy Bypass` اجرا می‌کند، آرگومان‌ها را پاس می‌دهد (به همین دلیل Drag & Drop کار می‌کند)، در صورت خطا پیام خوانا نشان می‌دهد و **همیشه** منتظر فشردن یک کلید می‌ماند تا پنجره هرگز ناگهان بسته نشود. سپس اسکریپت PowerShell:
 
-1. `ffprobe` را روی `PATH` پیدا می‌کند (یا مسیرش را می‌پرسد).
-2. همهٔ پوشه‌های انتخابی را به‌صورت بازگشتی برای پسوندهای بالا می‌گردد و فایل‌های تکراری در مسیرهای هم‌پوشان را یک‌بار حساب می‌کند.
-3. برای هر فایل این دستور را اجرا می‌کند:
+1. `ffprobe` را روی `PATH` پیدا می‌کند (یا در پوشه‌های معمول WinGet/FFmpeg، یا مسیرش را می‌پرسد).
+2. مسیرهای ورودی را اعتبارسنجی می‌کند و مسیرهای نامعتبر را با هشدار رد می‌کند.
+3. همهٔ پوشه‌های انتخابی را به‌صورت بازگشتی برای پسوندهای بالا می‌گردد و فایل‌های تکراری در مسیرهای هم‌پوشان را یک‌بار حساب می‌کند.
+4. برای هر فایل این دستور را اجرا می‌کند:
    ```text
    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i "<file>"
    ```
-4. مدت‌زمان را با **invariant culture** تجزیه می‌کند (تا در تنظیمات منطقه‌ای، `1.5` اشتباهاً `15` خوانده نشود) و مقادیر صفر/منفی/NaN را نادیده می‌گیرد.
-5. ثانیه‌ها را جمع، به ساعت/دقیقه/`h:mm:ss` تبدیل و فایل CSV را می‌نویسد.
+5. مدت‌زمان را با **invariant culture** تجزیه می‌کند (تا در تنظیمات منطقه‌ای، `1.5` اشتباهاً `15` خوانده نشود) و مقادیر صفر/منفی/NaN/بی‌نهایت را نادیده می‌گیرد.
+6. ثانیه‌ها را جمع، به ساعت/دقیقه/`h:mm:ss` تبدیل و فایل CSV را می‌نویسد.
+
+خطاها گرفته می‌شوند، با رنگ قرمز چاپ می‌شوند و در فایل `video_duration-error.log` کنار اسکریپت ثبت می‌شوند؛ بنابراین یک اجرای ناموفق هم ردپا باقی می‌گذارد و بی‌صدا بسته نمی‌شود.
 
 همه‌چیز محلی است. بدون دسترسی به شبکه و بدون جمع‌آوری داده.
 
@@ -352,11 +384,13 @@ CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 | مشکل | راه‌حل |
 |---|---|
 | `ffprobe was not found in PATH.` | FFmpeg را نصب کنید (بالا) یا وقتی پرسید، مسیر کامل `ffprobe.exe` را بدهید. |
-| `Folder not found.` | مسیر را بررسی کنید؛ برای مسیرهای دارای فاصله از گیومه استفاده کنید. |
-| `No video files found.` | مطمئن شوید پوشه پسوندهای پشتیبانی‌شده دارد؛ اسکن بازگشتی است، پس زیرپوشه‌ها هم شامل می‌شوند. |
+| `video_duration.ps1 was not found next to this file.` | دو فایل از هم جدا شده‌اند. `video_duration.bat` و `video_duration.ps1` باید در یک پوشه باشند. |
+| `None of the given folders exist.` | مسیر را بررسی کنید؛ برای مسیرهای دارای فاصله از گیومه استفاده کنید و چند مسیر را با `;` جدا کنید. |
+| `No video files were found in the selected folder(s).` | مطمئن شوید پوشه پسوندهای پشتیبانی‌شده دارد؛ اسکن بازگشتی است، پس زیرپوشه‌ها هم شامل می‌شوند. |
 | چند فایل به‌عنوان ناخوانا فهرست شدند | فایل خراب است، هنوز در حال دانلود است، یا کدک/کانتینر غیرمعمولی دارد. `ffprobe` با `-v error` دلیل را چاپ می‌کند. |
-| مجموع به‌نظر اشتباه است | به‌صورت عمدی به دقیقه گرد می‌شود. تم و تنظیمات منطقه‌ای هم نمی‌توانند تجزیه را خراب کنند. |
-| پنجره فوراً بسته می‌شود | از داخل ترمینال اجرا کنید (`cmd` → فایل `.bat` را داخلش بکشید → Enter) تا خطا را ببینید. |
+| مجموع به‌نظر اشتباه است | به‌صورت عمدی به دقیقه گرد می‌شود؛ مقدار دقیق `h:mm:ss` کنارش چاپ می‌شود. تنظیمات منطقه‌ای هم نمی‌تواند تجزیه را خراب کند. |
+| آنتی‌ویروس یا SmartScreen بلاک کرد | روی فایل‌ها راست‌کلیک → **Properties → Unblock**، یا `Unblock-File .\video_duration.*` را اجرا کنید. هر دو فایل متن ساده‌اند و هیچ چیز مبهمی ندارند. |
+| پنجره همچنان فوراً بسته می‌شود | تقریباً همیشه کار مرورگر/آنتی‌ویروس است که پروسه را می‌کشد. از ترمینال اجرا کنید (`cmd` → فایل `.bat` را داخلش بکشید → Enter) و فایل `video_duration-error.log` کنار اسکریپت را ببینید؛ همان را در یک [Issue](https://github.com/babak12124/video-duration-calculator/issues) بفرستید. |
 
 ## سؤالات متداول
 
@@ -374,6 +408,20 @@ CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 
 **چرا جمع به دقیقه گرد می‌شود؟**
 چون ما زمان تماشا را معمولاً به ساعت و دقیقه می‌گوییم («۹۶ ساعت و ۱۲ دقیقه»). مقدار دقیق `h:mm:ss` و ثانیهٔ خام هم بلافاصله زیرش چاپ می‌شود.
+
+## تغییرات نسخه‌ها
+
+### v1.1.0 — رفع باگ
+
+- **رفع مشکل:** روی بعضی سیستم‌ها پنجره باز و سریع بسته می‌شد. فایل `.bat` قبلی خودش را دوباره اجرا می‌کرد و یک بدنهٔ PowerShell جاسازی‌شده را با `Invoke-Expression` اجرا می‌کرد — الگویی که ضدویروس‌ها معمولاً بی‌صدا می‌کشند. حالا فقط یک لانچر ساده + یک فایل `.ps1` خوانا است.
+- پنجره حالا **همیشه** منتظر فشردن کلید می‌ماند و خطاها با پیام قرمز و فایل `video_duration-error.log` گزارش می‌شوند.
+- نبودِ `video_duration.ps1`، مسیر نامعتبر و ورودی خالی، به‌جای شکست بی‌صدا گزارش می‌شوند.
+- `h:mm:ss` دیگر بعد از ۲۴ ساعت صفر نمی‌شود (۳۰ ساعت به‌صورت `30:15:22` نمایش داده می‌شود، نه `06:15:22`).
+- پرسش مسیر تا ۳ بار تکرار می‌شود؛ `ffprobe` در پوشه‌های نصب WinGet/FFmpeg هم خودکار پیدا می‌شود.
+
+### v1.0.0 — اولین انتشار
+
+- محاسبهٔ بازگشتی مجموع، چند پوشه، Drag & Drop، گزارش CSV و مستندات دوزبانه.
 
 ## مشارکت
 

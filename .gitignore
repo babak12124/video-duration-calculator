@@ -1,8 +1,10 @@
 # Generated reports (keep the repo clean)
 video_durations-*.csv
+video_duration-error.log
 
 # OS / IDE
 Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+*.zip
