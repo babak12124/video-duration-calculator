@@ -1,3 +1,35 @@
+## Video & Audio Duration Calculator v2.5.0 — desktop app + cross-platform builds
+
+### What's new
+- **Cross-platform builds** — now ships for **Windows, Linux, and macOS** with a single GitHub Actions workflow
+- **Version bumped to 2.5.0** — `video_duration.ps1` and `video_duration_gui.py` both updated to 2.5.0
+- **Linux build fixed** — `build.yml` updated to use `libgl1` instead of `libgl1-mesa-glx`, and `libxcb-xinerama1` instead of `libxcb-xinerama0` to match Ubuntu 24.04 package names
+- **macOS build fixed** — `brew install python@3.12` replaces the deprecated `python@3.11` (Python 3.11 reached EOL)
+- **PyInstaller 6.x compatible** — added `--clean` flag to force clean rebuilds for reproducible artifacts
+- **Auto-detected ffprobe** — the launcher now searches common installation paths and provides a clear one-time hint if ffprobe is missing
+
+### Notes
+- The console version (`video_duration.bat` + `video_duration.ps1`) is unchanged — both work side by side.
+- GUI requirements: Python 3.12+ and PySide6 (installed by the launcher on first run).
+
+**Docs:** [README.md](https://github.com/babak12124/video-duration-calculator#readme)
+
+### فارسی
+از این نسخه برنامه یک پنجرهٔ واقعی دارد: همان اسکن دقیق با `ffprobe`، همان گزارش CSV، اما برای کسانی که ترجیح می‌دهند کلیک کنند نه تایپ، و هم‌اکنون برای ویندوز، لینوکس و مک در یک عملیات واحد بوتن می‌شود.
+
+- **رابط جدید PySide6** (`video_duration_gui.py`) — افزودن پوشه، انتخاب ویدیو/صدا، نوار پیشرفت، نمایش مجموع‌ها و باز کردن CSV؛ بدون ترمینال.
+- **فارسی و انگلیسی** — با یک دکمه کل رابط عوض می‌شود، همراه با چیدمان راست‌به‌چپ، و انتخاب شما ذخیره می‌ماند.
+- **کشیدن و رها کردن** — پوشه را مستقیم روی پنجره رها کنید.
+- **هیچ چیز فنی روی صفحه نیست** — FFmpeg خودکار پیدا می‌شود؛ فقط اگر نصب نباشد یک راهنمای کوتاه یک‌باره یا امکان انتخاب فایل نشان داده می‌شود.
+- **دکمهٔ CSV** — گزارش مثل قبل کنار اسکریپت نوشته می‌شود و با یک کلیک باز می‌شود.
+- **بدون پنجرهٔ کنسول** — `video_duration_gui.bat` برنامه را با `pythonw` اجرا می‌کند و بار اولPySide6 را نصب می‌کند.
+- **ساخت پیکربندی متقابل‌پلتفرم** — اکنون چک‌لیست ساخت به‌طور خودکار برای ویندوز، لینوکس و مک اجرا می‌شود.
+
+نسخهٔ کنسولی (`video_duration.bat` + `video_duration.ps1`) دست‌نخورده است و هر دو کنار هم کار می‌کنند. پیش‌نیاز نسخهٔ گرافیکی: پایتون ۳.۱۲+ و PySide6 (که لانچر نصب می‌کند).
+
+---
+
+
 ## Video & Audio Duration Calculator v2.0.0 — desktop app
 
 The tool now has a real window. Same accurate `ffprobe` scan, same CSV report, built for people who would rather click than type.
