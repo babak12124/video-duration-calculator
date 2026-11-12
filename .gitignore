@@ -1,0 +1,8 @@
+# Generated reports (keep the repo clean)
+video_durations-*.csv
+
+# OS / IDE
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

@@ -2,7 +2,7 @@
 
 > Add up the total runtime of every video in a folder — recursively — in seconds, with one double-click.
 
-A tiny, dependency-light Windows script that walks a folder tree, reads the duration of every video file with **ffprobe**, and prints the total runtime as hours and minutes.
+A tiny, dependency-light Windows script that walks one or more folder trees, reads the duration of every video file with **ffprobe**, and prints the total runtime as hours, minutes and `h:mm:ss` — plus a CSV report.
 
 **English** · [فارسی](#فارسی)
 
@@ -38,7 +38,10 @@ You have a folder full of movies, lectures, courses, or camera clips and you wan
 
 - 🔁 **Recursive scan** — descends into every subfolder automatically.
 - 🎯 **Accurate durations** — reads real container/stream metadata via `ffprobe`, not file size or bitrate estimates.
-- 📊 **Instant total** — prints the grand total as *“X hours and Y minutes”*.
+- 📁 **Multiple folders at once** — type `D:\Movies; E:\Courses` and both are scanned (or drag a folder onto the `.bat`).
+- 📊 **Instant total** — prints the grand total as *“X hours and Y minutes”* plus `h:mm:ss` and raw seconds.
+- 🧾 **CSV report** — writes a timestamped `video_durations-*.csv` with one row per file (path, size, seconds, `hh:mm:ss`, status), importable into Excel.
+- 🧹 **No double counting** — folders that overlap (e.g. a parent and its child) are de-duplicated.
 - 🧾 **Full report** — shows how many video files were found and how many durations were read successfully.
 - ⚠️ **Graceful errors** — lists every file whose duration could not be read instead of failing silently.
 - 🪶 **Zero install footprint** — a single `.bat` file; nothing to compile, no Python, no Node.js.
@@ -88,31 +91,47 @@ git clone https://github.com/babak12124/video-duration-calculator.git
 
 ## Usage
 
-1. **Double-click `video_duration.bat`** (or run it from a terminal).
-2. Enter a **folder path**, e.g. `D:\Movies` or `"C:\Users\Me\Videos\Course"`.
-   - Quotes are fine and get stripped automatically.
-   - The scan includes **all subfolders**.
-3. Wait for the progress bar (`Reading durations 42 / 180`) to finish.
-4. Read the total from the green line.
+**Option A — double-click**
 
-The window stays open until you press a key, so the result never disappears.
+1. Double-click `video_duration.bat`.
+2. Enter one or more **folder paths**, e.g. `D:\Movies` or `"C:\Users\Me\Videos\Course"`, or several at once: `D:\Movies; E:\Courses`.
+   - Quotes are fine and get stripped automatically.
+   - Separate multiple paths with a **semicolon** `;`.
+   - Every folder is scanned **recursively**, and duplicate files are counted once.
+3. Wait for the progress bar (`Reading durations 42 / 180`) to finish.
+4. Read the total from the green lines.
+
+**Option B — drag & drop**
+
+Drag a folder from Explorer onto `video_duration.bat`. It starts immediately with that folder — no typing.
+
+**Option C — from a terminal**
+
+```powershell
+.\video_duration.bat "D:\Movies; E:\Courses"
+```
+
+The window stays open until you press a key, so the result never disappears. Every run also drops a CSV report next to the script (or in `%TEMP%` if that folder is read-only).
 
 ## Example Output
 
 ```text
-Enter folder path (e.g. D:\Movies): D:\Movies
-
+Folders scanned   : 2
 Video files found : 180
 Durations read    : 179
-Total duration    : 96 hours and 12 minutes
+Total duration    : 96 hours and 12 minutes  (96:12:04)
+Total seconds     : 346324.6
 
 Could not read duration for:
   D:\Movies\clips\corrupted_clip.avi
+
+CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 ```
 
-- **Video files found** — every file with a supported extension, in the folder and all subfolders.
+- **Video files found** — every file with a supported extension, across all folders and subfolders.
 - **Durations read** — how many of those `ffprobe` could actually parse.
-- **Total duration** — the sum, rounded to the nearest minute.
+- **Total duration** — the sum, rounded to the nearest minute, with exact `h:mm:ss` in parentheses.
+- **CSV** — the same data per file: `Path, SizeMB, DurationSeconds, Duration, Status`.
 
 ## Supported Formats
 
@@ -125,13 +144,13 @@ Matching is case-insensitive (`Movie.MP4` counts). `ffprobe` can read many more 
 The `.bat` is a hybrid file: the Batch part re-launches itself through PowerShell, extracting everything after the `#PSSTART` marker and running it. Then it:
 
 1. Locates `ffprobe` on `PATH` (or asks for its path).
-2. Recursively enumerates the chosen folder for the extensions above.
+2. Recursively enumerates every chosen folder for the extensions above, de-duplicating files that appear in overlapping paths.
 3. For each file, runs:
    ```text
    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i "<file>"
    ```
-4. Parses the duration using **invariant culture** (so `1.5` is never misread as `15` on regional settings).
-5. Sums the seconds, then converts to `hours` and `minutes`, rounding to the nearest minute.
+4. Parses the duration using **invariant culture** (so `1.5` is never misread as `15` on regional settings), ignoring zero/negative/NaN values.
+5. Sums the seconds, converts to `hours`/`minutes`/`h:mm:ss`, and writes the per-file CSV.
 
 Everything is local. No network access, no data collection.
 
@@ -158,20 +177,20 @@ No, never.
 The `.bat` wrapper is Windows-only. The underlying idea is one `ffprobe` call per file; a Bash equivalent is a few lines. PRs welcome.
 
 **Can it export the result to a file?**
-Not yet — currently it prints to the console. Easy to add; see [Contributing](#contributing).
+Yes. Each run writes `video_durations-<timestamp>.csv` next to the script (falls back to `%TEMP%` if the folder is read-only). Open it in Excel or any spreadsheet.
 
 **Why is the total rounded to minutes?**
-Because that's how humans quote viewing time (“96 hours, 12 minutes”). For second-level precision, remove the rounding step.
+Because that's how humans quote viewing time (“96 hours, 12 minutes”). The exact `h:mm:ss` and total seconds are printed right below it.
 
 ## Contributing
 
 Issues and pull requests are welcome. Ideas that would fit well:
 
-- CSV/TXT export of per-file durations
-- Multi-folder/multi-drive support in one run
-- Optional `hours:minutes:seconds` output
+- Multi-drive scan in parallel (faster on slow HDDs)
+- Optional `hours:minutes:seconds`-only output mode
 - A PowerShell module version
 - Bash / macOS port
+- Grafana/JSON report output
 
 Please keep changes small, readable, and dependency-free.
 
@@ -187,7 +206,7 @@ Please keep changes small, readable, and dependency-free.
 
 > با یک دابل‌کلیک، مجموع زمان همهٔ ویدیوهای یک پوشه را — همراه با تمام زیرپوشه‌ها — حساب کن.
 
-یک اسکریپت کوچک ویندوزی که درخت پوشه‌ها را پیمایش می‌کند، مدت‌زمان هر فایل ویدیویی را با **ffprobe** می‌خواند و مجموع را به ساعت و دقیقه چاپ می‌کند.
+یک اسکریپت کوچک ویندوزی که یک یا چند درخت پوشه را پیمایش می‌کند، مدت‌زمان هر فایل ویدیویی را با **ffprobe** می‌خواند و مجموع را به ساعت، دقیقه و `h:mm:ss` — به‌همراه یک گزارش CSV — چاپ می‌کند.
 
 ## فهرست
 
@@ -212,7 +231,10 @@ Please keep changes small, readable, and dependency-free.
 
 - 🔁 **پیمایش بازگشتی** — همهٔ زیرپوشه‌ها خودکار بررسی می‌شوند.
 - 🎯 **مدت‌زمان دقیق** — متادیتای واقعی فایل با `ffprobe` خوانده می‌شود، نه تخمین از روی حجم یا بیت‌ریت.
-- 📊 **جمع فوری** — خروجی به شکل «X ساعت و Y دقیقه».
+- 📁 **چند پوشه هم‌زمان** — بنویسید `D:\Movies; E:\Courses` تا هر دو اسکن شوند (یا پوشه را روی فایل `.bat` بکشید و رها کنید).
+- 📊 **جمع فوری** — خروجی به شکل «X ساعت و Y دقیقه» به‌همراه `h:mm:ss` و ثانیهٔ خام.
+- 🧾 **گزارش CSV** — هر اجرا یک فایل `video_durations-*.csv` با تاریخ‌وساعت می‌سازد؛ یک ردیف برای هر فایل (مسیر، حجم، ثانیه، `hh:mm:ss`، وضعیت) که در اکسل قابل بازکردن است.
+- 🧹 **بدون شمارش تکراری** — اگر پوشه‌ها هم‌پوشانی داشته باشند (مثلاً پوشه و زیرپوشه‌اش)، فایل تکراری دوبار حساب نمی‌شود.
 - 🧾 **گزارش کامل** — تعداد فایل‌های پیداشده و تعداد مدت‌های خوانده‌شده نمایش داده می‌شود.
 - ⚠️ **مدیریت خطا** — فایل‌هایی که مدتشان خوانده نشود، فهرست می‌شوند؛ هیچ خطایی بی‌صدا رد نمی‌شود.
 - 🪶 **بدون نصب** — فقط یک فایل `.bat`؛ نه کامپایل، نه پایتون، نه Node.js.
@@ -262,31 +284,47 @@ git clone https://github.com/babak12124/video-duration-calculator.git
 
 ## نحوهٔ استفاده
 
-1. روی **`video_duration.bat` دابل‌کلیک** کنید (یا از ترمینال اجرایش کنید).
-2. مسیر پوشه را وارد کنید، مثلاً `D:\Movies` یا `"C:\Users\Me\Videos\Course"`.
-   - گذاشتن گیومه اشکالی ندارد و خودکار حذف می‌شود.
-   - **همهٔ زیرپوشه‌ها** هم اسکن می‌شوند.
-3. تا تمام شدن نوار پیشرفت (`Reading durations 42 / 180`) صبر کنید.
-4. مجموع را از خط سبز بخوانید.
+**روش الف — دابل‌کلیک**
 
-پنجره تا فشردن یک کلید باز می‌ماند، پس نتیجه از دست نمی‌رود.
+1. روی `video_duration.bat` دابل‌کلیک کنید.
+2. یک یا چند **مسیر پوشه** وارد کنید، مثلاً `D:\Movies` یا `"C:\Users\Me\Videos\Course"` یا چندتایی با هم: `D:\Movies; E:\Courses`.
+   - گذاشتن گیومه اشکالی ندارد و خودکار حذف می‌شود.
+   - مسیرهای متعدد را با **سمی‌کالن** `;` جدا کنید.
+   - همهٔ پوشه‌ها **به‌صورت بازگشتی** اسکن می‌شوند و فایل‌های تکراری یک‌بار حساب می‌شوند.
+3. تا تمام شدن نوار پیشرفت (`Reading durations 42 / 180`) صبر کنید.
+4. مجموع را از خطوط سبز بخوانید.
+
+**روش ب — کشیدن و رها کردن**
+
+پوشه را از Explorer روی `video_duration.bat` بکشید. بدون هیچ تایپی، همان پوشه اسکن می‌شود.
+
+**روش ج — از ترمینال**
+
+```powershell
+.\video_duration.bat "D:\Movies; E:\Courses"
+```
+
+پنجره تا فشردن یک کلید باز می‌ماند، پس نتیجه از دست نمی‌رود. هر اجرا یک گزارش CSV هم کنار اسکریپت می‌سازد (اگر آن پوشه فقط-خواندنی باشد، در `%TEMP%`).
 
 ## نمونهٔ خروجی
 
 ```text
-Enter folder path (e.g. D:\Movies): D:\Movies
-
+Folders scanned   : 2
 Video files found : 180
 Durations read    : 179
-Total duration    : 96 hours and 12 minutes
+Total duration    : 96 hours and 12 minutes  (96:12:04)
+Total seconds     : 346324.6
 
 Could not read duration for:
   D:\Movies\clips\corrupted_clip.avi
+
+CSV written to    : D:\Tools\video_durations-20260114-210355.csv
 ```
 
-- **Video files found** — تعداد فایل‌های با پسوند پشتیبانی‌شده در پوشه و زیرپوشه‌ها.
+- **Video files found** — همهٔ فایل‌های با پسوند پشتیبانی‌شده در تمام پوشه‌ها و زیرپوشه‌ها.
 - **Durations read** — چند فایل را `ffprobe` واقعاً توانسته بخواند.
-- **Total duration** — مجموع، گردشده به نزدیک‌ترین دقیقه.
+- **Total duration** — مجموع، گردشده به نزدیک‌ترین دقیقه، با `h:mm:ss` دقیق در پرانتز.
+- **CSV** — همان داده‌ها به تفکیک فایل: `Path, SizeMB, DurationSeconds, Duration, Status`.
 
 ## فرمت‌های پشتیبانی‌شده
 
@@ -299,13 +337,13 @@ Could not read duration for:
 فایل `.bat` یک فایل ترکیبی است: بخش Batch خودش را از طریق PowerShell دوباره اجرا می‌کند و هر چیزی بعد از نشانگر `#PSSTART` را استخراج و اجرا می‌کند. سپس:
 
 1. `ffprobe` را روی `PATH` پیدا می‌کند (یا مسیرش را می‌پرسد).
-2. پوشهٔ انتخابی را به‌صورت بازگشتی برای پسوندهای بالا می‌گردد.
+2. همهٔ پوشه‌های انتخابی را به‌صورت بازگشتی برای پسوندهای بالا می‌گردد و فایل‌های تکراری در مسیرهای هم‌پوشان را یک‌بار حساب می‌کند.
 3. برای هر فایل این دستور را اجرا می‌کند:
    ```text
    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i "<file>"
    ```
-4. مدت‌زمان را با **invariant culture** تجزیه می‌کند (تا در تنظیمات منطقه‌ای، `1.5` اشتباهاً `15` خوانده نشود).
-5. ثانیه‌ها را جمع و به ساعت و دقیقه تبدیل می‌کند، با گرد کردن به نزدیک‌ترین دقیقه.
+4. مدت‌زمان را با **invariant culture** تجزیه می‌کند (تا در تنظیمات منطقه‌ای، `1.5` اشتباهاً `15` خوانده نشود) و مقادیر صفر/منفی/NaN را نادیده می‌گیرد.
+5. ثانیه‌ها را جمع، به ساعت/دقیقه/`h:mm:ss` تبدیل و فایل CSV را می‌نویسد.
 
 همه‌چیز محلی است. بدون دسترسی به شبکه و بدون جمع‌آوری داده.
 
@@ -332,20 +370,20 @@ Could not read duration for:
 پوستهٔ `.bat` فقط برای ویندوز است. ایدهٔ اصلی یک فراخوانی `ffprobe` برای هر فایل است؛ معادل Bash چند خط بیشتر نیست. Pull Request پذیرفته می‌شود.
 
 **می‌شود خروجی را در فایل ذخیره کرد؟**
-فعلاً نه — نتیجه در کنسول چاپ می‌شود. افزودنش ساده است؛ بخش [مشارکت](#مشارکت) را ببینید.
+بله. هر اجرا فایل `video_durations-<timestamp>.csv` را کنار اسکریپت می‌سازد (اگر پوشه فقط-خواندنی باشد، در `%TEMP%`). در اکسل یا هر برنامهٔ صفحه‌گسترده‌ای قابل بازکردن است.
 
 **چرا جمع به دقیقه گرد می‌شود؟**
-چون ما زمان تماشا را معمولاً به ساعت و دقیقه می‌گوییم («۹۶ ساعت و ۱۲ دقیقه»). برای دقت ثانیه‌ای، مرحلهٔ گرد کردن را حذف کنید.
+چون ما زمان تماشا را معمولاً به ساعت و دقیقه می‌گوییم («۹۶ ساعت و ۱۲ دقیقه»). مقدار دقیق `h:mm:ss` و ثانیهٔ خام هم بلافاصله زیرش چاپ می‌شود.
 
 ## مشارکت
 
 Issue و Pull Request خوش‌آمد است. ایده‌هایی که خوب جفت می‌شوند:
 
-- خروجی CSV/TXT از مدت هر فایل
-- پشتیبانی از چند پوشه/چند درایو در یک اجرا
-- خروجی اختیاری به شکل `hours:minutes:seconds`
+- اسکن موازی چند درایو (سریع‌تر روی هاردهای کند)
+- حالت خروجی فقط `hours:minutes:seconds`
 - نسخهٔ PowerShell Module
 - پورت Bash / macOS
+- خروجی JSON برای داشبورد
 
 لطفاً تغییرات را کوچک، خوانا و بدون وابستگی نگه دارید.
 
