@@ -1,33 +1,50 @@
 ﻿<#
 .SYNOPSIS
-    Video Duration Calculator - sums the runtime of every video in one or more folders.
+    Video & Audio Duration Calculator - sums the runtime of every media file in one or more folders.
 
 .DESCRIPTION
-    Recursively scans the given folders, reads each video's duration with ffprobe,
-    prints the total as hours/minutes plus exact h:mm:ss, and writes a CSV report.
+    Recursively scans the given folders, reads each file's duration with ffprobe,
+    prints totals as hours/minutes plus exact h:mm:ss (video and audio counted
+    separately, then combined), and writes a CSV report.
 
 .PARAMETER Path
-    One or more folder paths. Multiple paths may also be passed as a single
-    semicolon-separated string ("D:\Movies; E:\Courses").
+    One or more folder paths, passed positionally. Multiple paths may also be
+    given as a single semicolon-separated string ("D:\Movies; E:\Courses").
+
+.PARAMETER Include
+    Which media to count: Video, Audio, or Both (default). Passed as
+    -Include Audio (also accepts -i / --include=audio).
 
 .EXAMPLE
-    .\video_duration.ps1 -Path "D:\Movies"
+    .\video_duration.ps1 "D:\Movies"
 
 .EXAMPLE
-    .\video_duration.ps1 -Path "D:\Movies; E:\Courses"
+    .\video_duration.ps1 "D:\Music" -Include Audio
+
+.EXAMPLE
+    .\video_duration.ps1 "D:\Movies; D:\Music"
 #>
-[CmdletBinding()]
-param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$Path
-)
+
+# NOTE: arguments are parsed manually on purpose. With a param() block PowerShell
+# would bind a lone positional path to -Include and reject it, which broke
+# drag & drop / double-click usage.
+$rawArguments = @($args)
+$Include = 'Both'
+$pathInputs = @()
 
 $ErrorActionPreference = 'Stop'
-$script:Version = '1.1.0'
+$script:Version = '1.2.0'
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$extensions = @('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg', '.ts', '.3gp')
+$videoExtensions = @(
+    '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg',
+    '.ts', '.m2ts', '.mts', '.3gp', '.ogv', '.vob', '.divx', '.rmvb', '.asf', '.f4v', '.mxf'
+)
+$audioExtensions = @(
+    '.mp3', '.m4a', '.m4b', '.aac', '.wav', '.flac', '.ogg', '.oga', '.opus', '.wma',
+    '.aiff', '.aif', '.ape', '.wv', '.amr', '.mka', '.ac3', '.dts', '.alac'
+)
 
 function Get-ScriptFolder {
     if ($PSScriptRoot) { return $PSScriptRoot }
@@ -52,6 +69,14 @@ function Format-Hms {
     param([double]$Seconds)
     $ts = [TimeSpan]::FromSeconds([math]::Round($Seconds))
     '{0}:{1:00}:{2:00}' -f [math]::Floor($ts.TotalHours), $ts.Minutes, $ts.Seconds
+}
+
+function Format-Total {
+    param([double]$Seconds)
+    $mins = [math]::Round($Seconds / 60)
+    $h = [math]::Floor($mins / 60)
+    $m = $mins % 60
+    "$h hours and $m minutes  ($(Format-Hms -Seconds $Seconds))"
 }
 
 function Find-Ffprobe {
@@ -85,7 +110,38 @@ $logPath = Join-Path (Get-ScriptFolder) 'video_duration-error.log'
 try {
     if (Test-Path -LiteralPath $logPath) { Remove-Item -LiteralPath $logPath -Force -ErrorAction SilentlyContinue }
 
-    Write-Host "Video Duration Calculator $script:Version" -ForegroundColor Cyan
+    # --- parse arguments (-Include must never swallow a folder path) ---
+    for ($i = 0; $i -lt $rawArguments.Count; $i++) {
+        $arg = [string]$rawArguments[$i]
+        if ($arg -match '^(?i)-{1,2}(?:include|i)$') {
+            if ($i + 1 -ge $rawArguments.Count) { throw 'The -Include switch needs a value: Both, Video or Audio.' }
+            $Include = [string]$rawArguments[$i + 1]
+            $i++
+        }
+        elseif ($arg -match '^(?i)-{1,2}include=(.+)$') {
+            $Include = $Matches[1]
+        }
+        elseif ($arg -match '^(?i)-{1,2}(?:path|p)$') {
+            if ($i + 1 -lt $rawArguments.Count) { $pathInputs += [string]$rawArguments[$i + 1]; $i++ }
+        }
+        else {
+            $pathInputs += $arg
+        }
+    }
+
+    switch ($Include.ToLowerInvariant()) {
+        'both'   { $Include = 'Both' }
+        'all'    { $Include = 'Both' }
+        'video'  { $Include = 'Video' }
+        'videos' { $Include = 'Video' }
+        'audio'  { $Include = 'Audio' }
+        'audios' { $Include = 'Audio' }
+        'music'  { $Include = 'Audio' }
+        default  { throw "Invalid -Include value: '$Include'. Use Both, Video or Audio." }
+    }
+
+    Write-Host "Video & Audio Duration Calculator $script:Version" -ForegroundColor Cyan
+    Write-Host "Counting: $Include" -ForegroundColor DarkGray
     Write-Host ""
 
     # --- locate ffprobe ---
@@ -102,7 +158,7 @@ try {
     }
 
     # --- collect folder paths ---
-    $rawPaths = Split-Paths -Values $Path
+    $rawPaths = Split-Paths -Values $pathInputs
     if ($rawPaths.Count -eq 0) {
         Write-Host "Enter one or more folder paths." -ForegroundColor Cyan
         Write-Host "Separate multiple paths with a semicolon ( ; ). Quotes are allowed." -ForegroundColor DarkGray
@@ -131,32 +187,50 @@ try {
     }
     if ($folders.Count -eq 0) { throw 'None of the given folders exist.' }
 
-    # --- collect video files (de-duplicated) ---
+    # --- which kinds to count ---
+    $wantedKinds = switch ($Include) {
+        'Video' { @('Video') }
+        'Audio' { @('Audio') }
+        default { @('Video', 'Audio') }
+    }
+
+    # --- collect media files (de-duplicated) ---
     $seen = @{}
-    $files = New-Object System.Collections.Generic.List[object]
+    $items = New-Object System.Collections.Generic.List[object]
     foreach ($folder in $folders) {
         Get-ChildItem -LiteralPath $folder -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-            if ($extensions -contains $_.Extension.ToLower()) {
-                $key = $_.FullName.ToLowerInvariant()
-                if (-not $seen.ContainsKey($key)) {
-                    $seen[$key] = $true
-                    $files.Add($_)
-                }
+            $file = $_
+            $ext = $file.Extension.ToLowerInvariant()
+            $kind = $null
+            if ($videoExtensions -contains $ext) { $kind = 'Video' }
+            elseif ($audioExtensions -contains $ext) { $kind = 'Audio' }
+            if (-not $kind) { return }
+            if ($wantedKinds -notcontains $kind) { return }
+
+            $key = $file.FullName.ToLowerInvariant()
+            if (-not $seen.ContainsKey($key)) {
+                $seen[$key] = $true
+                $items.Add([pscustomobject]@{ File = $file; Kind = $kind })
             }
         }
     }
-    if ($files.Count -eq 0) { throw 'No video files were found in the selected folder(s).' }
+    if ($items.Count -eq 0) {
+        throw "No matching media files were found (mode: $Include). Try -Include Both, or check the folder."
+    }
 
     # --- read durations ---
-    $totalSec = 0.0
-    $ok = 0
+    $totals = @{ Video = 0.0; Audio = 0.0 }
+    $counts = @{ Video = @{ Found = 0; Read = 0 }; Audio = @{ Found = 0; Read = 0 } }
     $rows = New-Object System.Collections.Generic.List[object]
     $i = 0
 
-    foreach ($f in $files) {
+    foreach ($item in $items) {
         $i++
-        Write-Progress -Activity "Reading durations" -Status "$i / $($files.Count) : $($f.Name)" `
-                       -PercentComplete (($i / $files.Count) * 100)
+        $f = $item.File
+        Write-Progress -Activity "Reading durations" -Status "$i / $($items.Count) : $($item.Kind) : $($f.Name)" `
+                       -PercentComplete (($i / $items.Count) * 100)
+
+        $counts[$item.Kind].Found++
 
         $out = & $ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i $f.FullName 2>$null
         $sec = 0.0
@@ -166,8 +240,8 @@ try {
             if ([double]::TryParse($first, [Globalization.NumberStyles]::Float,
                                    [Globalization.CultureInfo]::InvariantCulture, [ref]$sec) -and
                 $sec -gt 0 -and -not [double]::IsNaN($sec) -and -not [double]::IsInfinity($sec)) {
-                $totalSec += $sec
-                $ok++
+                $totals[$item.Kind] += $sec
+                $counts[$item.Kind].Read++
                 $good = $true
             }
         }
@@ -182,6 +256,7 @@ try {
         }
 
         $rows.Add([pscustomobject]@{
+            Kind            = $item.Kind
             Path            = $f.FullName
             SizeMB          = [math]::Round($f.Length / 1MB, 2)
             DurationSeconds = $durSec
@@ -191,30 +266,39 @@ try {
     }
     Write-Progress -Activity "Reading durations" -Completed
 
-    # --- totals ---
-    $mins = [math]::Round($totalSec / 60)
-    $h = [math]::Floor($mins / 60)
-    $m = $mins % 60
-
+    # --- report ---
     Write-Host ""
     Write-Host "Folders scanned   : $($folders.Count)"
-    Write-Host "Video files found : $($files.Count)"
-    Write-Host "Durations read    : $ok"
-    Write-Host "Total duration    : $h hours and $m minutes  ($(Format-Hms -Seconds $totalSec))" -ForegroundColor Green
-    Write-Host ("Total seconds     : {0:N1}" -f $totalSec) -ForegroundColor DarkGray
+    foreach ($kind in $wantedKinds) {
+        $c = $counts[$kind]
+        if ($c.Found -gt 0) {
+            Write-Host ("{0,-17} : {1} (durations read: {2})" -f "$kind files", $c.Found, $c.Read)
+        }
+    }
+
+    $foundKinds = @($wantedKinds | Where-Object { $counts[$_].Found -gt 0 })
+    foreach ($kind in $foundKinds) {
+        Write-Host ("{0,-17}: {1}" -f "Total $($kind.ToLower())", (Format-Total -Seconds $totals[$kind])) -ForegroundColor Green
+    }
+    if ($foundKinds.Count -gt 1) {
+        $sum = $totals['Video'] + $totals['Audio']
+        Write-Host ("{0,-17}: {1}" -f 'Total combined', (Format-Total -Seconds $sum)) -ForegroundColor Green
+    }
+    $grandTotal = ($foundKinds | ForEach-Object { $totals[$_] } | Measure-Object -Sum).Sum
+    Write-Host ("Total seconds    : {0:N1}" -f $grandTotal) -ForegroundColor DarkGray
 
     $failed = @($rows | Where-Object { $_.Status -ne 'OK' })
     if ($failed.Count -gt 0) {
         Write-Host ""
         Write-Host "Could not read duration for:" -ForegroundColor Yellow
-        $failed | ForEach-Object { Write-Host "  $($_.Path)" }
+        $failed | ForEach-Object { Write-Host "  [$($_.Kind)] $($_.Path)" }
     }
 
     # --- CSV report ---
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $written = $false
     foreach ($dir in @((Get-ScriptFolder), $env:TEMP)) {
-        $csv = Join-Path $dir "video_durations-$stamp.csv"
+        $csv = Join-Path $dir "media_durations-$stamp.csv"
         try {
             $rows | Export-Csv -LiteralPath $csv -NoTypeInformation -Encoding UTF8
             Write-Host ""

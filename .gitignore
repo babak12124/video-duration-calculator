@@ -1,4 +1,5 @@
 # Generated reports (keep the repo clean)
+media_durations-*.csv
 video_durations-*.csv
 video_duration-error.log
 
@@ -7,4 +8,6 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Build artifacts
 *.zip

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 chcp 65001 >nul
-title Video Duration Calculator
+title Video and Audio Duration Calculator
 set "VD_HOME=%~dp0"
 set "VD_PS=%VD_HOME%video_duration.ps1"
 set "VD_LOG=%VD_HOME%video_duration-error.log"
