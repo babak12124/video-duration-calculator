@@ -1,0 +1,2 @@
+# GUI dependencies (the console .bat + PowerShell version needs none)
+PySide6-Essentials>=6.5

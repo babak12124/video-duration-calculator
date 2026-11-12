@@ -1,3 +1,38 @@
+## Video & Audio Duration Calculator v2.0.0 — desktop app
+
+The tool now has a real window. Same accurate `ffprobe` scan, same CSV report, built for people who would rather click than type.
+
+### What's new
+
+- **New PySide6 interface** (`video_duration_gui.py`) — add folders, choose video/audio, follow the progress bar, read the totals, open the CSV. No terminal involved.
+- **Persian and English** — one button switches the whole interface, right-to-left layout included; the choice is remembered.
+- **Drag & drop** — drop folders straight onto the window.
+- **Nothing technical on screen** — FFmpeg is detected automatically. Only when it is missing does the app show a short one-time hint or a file picker.
+- **CSV button** — the report is still written next to the script; one click opens it.
+- **No console window** — `video_duration_gui.bat` starts the app with `pythonw` and installs PySide6 on first run.
+
+### Notes
+
+- The console version (`video_duration.bat` + `video_duration.ps1`) is unchanged — both work side by side.
+- GUI requirements: Python 3.9+ and PySide6 (installed by the launcher).
+
+**Docs:** [README.md](https://github.com/babak12124/video-duration-calculator#readme)
+
+### فارسی
+
+از این نسخه برنامه یک پنجرهٔ واقعی دارد: همان اسکن دقیق با `ffprobe`، همان گزارش CSV، اما برای کسانی که ترجیح می‌دهند کلیک کنند نه تایپ.
+
+- **رابط جدید PySide6** (`video_duration_gui.py`) — افزودن پوشه، انتخاب ویدیو/صدا، نوار پیشرفت، نمایش مجموع‌ها و باز کردن CSV؛ بدون ترمینال.
+- **فارسی و انگلیسی** — با یک دکمه کل رابط عوض می‌شود، همراه با چیدمان راست‌به‌چپ، و انتخاب شما ذخیره می‌ماند.
+- **کشیدن و رها کردن** — پوشه را مستقیم روی پنجره رها کنید.
+- **هیچ چیز فنی روی صفحه نیست** — FFmpeg خودکار پیدا می‌شود؛ فقط اگر نصب نباشد یک راهنمای کوتاه یک‌باره یا امکان انتخاب فایل نشان داده می‌شود.
+- **دکمهٔ CSV** — گزارش مثل قبل کنار اسکریپت نوشته می‌شود و با یک کلیک باز می‌شود.
+- **بدون پنجرهٔ کنسول** — `video_duration_gui.bat` برنامه را با `pythonw` اجرا می‌کند و بار اول PySide6 را نصب می‌کند.
+
+نسخهٔ کنسولی (`video_duration.bat` + `video_duration.ps1`) دست‌نخورده است و هر دو کنار هم کار می‌کنند. پیش‌نیاز نسخهٔ گرافیکی: پایتون ۳٫۹+ و PySide6 (که لانچر نصب می‌کند).
+
+---
+
 ## Video & Audio Duration Calculator v1.2.0 — audio support
 
 Music, podcasts and audiobooks now count too. The tool reports **video**, **audio** and **combined** time separately, and you can pick what to count with one switch.

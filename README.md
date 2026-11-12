@@ -21,6 +21,7 @@ A tiny, dependency-light Windows script that walks one or more folder trees, rea
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Graphical version (Python)](#graphical-version-python)
 - [Example Output](#example-output)
 - [Supported Formats](#supported-formats)
 - [How It Works](#how-it-works)
@@ -48,7 +49,8 @@ You have a folder full of movies, lectures, courses, camera clips, music albums 
 - 🧹 **No double counting** — folders that overlap (e.g. a parent and its child) are de-duplicated.
 - 🧾 **Full report** — shows how many files were found per type and how many durations were read successfully.
 - ⚠️ **Graceful errors** — lists every file whose duration could not be read instead of failing silently.
-- 🪶 **Zero install footprint** — a launcher plus a script; nothing to compile, no Python, no Node.js.
+- 🖥 **Graphical version (v2.0)** — `video_duration_gui.py` does the same scan in a clean PySide6 window with drag & drop, a Persian/English switch and right-to-left layout; the console version stays available.
+- 🪶 **Zero install footprint** — the console version is a launcher plus a script; nothing to compile, no Python, no Node.js. (The optional GUI needs Python 3 + PySide6, installed automatically on first launch.)
 - 🌍 **Unicode-safe** — UTF-8 console output, so non-English paths work.
 
 ## Requirements
@@ -57,6 +59,7 @@ You have a folder full of movies, lectures, courses, camera clips, music albums 
 |---|---|
 | **Windows 10 / 11** | Uses `cmd.exe` + Windows PowerShell 5.1 (built in). |
 | **FFmpeg (`ffprobe`)** | The only real dependency. Install it and make sure `ffprobe` is on `PATH`. |
+| **Python 3.9+** *(GUI only)* | Only for `video_duration_gui.py`; the launcher installs PySide6 the first time. |
 
 ### Installing FFmpeg on Windows
 
@@ -128,6 +131,25 @@ Drag a folder from Explorer onto `video_duration.bat`. It starts immediately wit
 ```
 
 The window stays open until you press a key, so the result never disappears. Every run also drops a CSV report next to the script (or in `%TEMP%` if that folder is read-only).
+
+## Graphical version (Python)
+
+`video_duration_gui.py` is the same tool with a window — same recursive scan, same `ffprobe` readings, same CSV — built with PySide6 (Qt 6). **Version 2.0.**
+
+**Requirements:** Python 3.9+ and PySide6. Nothing to install by hand: `video_duration_gui.bat` installs PySide6 the first time it runs.
+
+1. Double-click `video_duration_gui.bat` — no console window appears.
+2. Press **Add folder…**, or drag folders straight onto the window. Then pick **Video + audio**, **Video only** or **Audio only**.
+3. Press **Calculate total**. Durations are read in the background, so the window never freezes; **Cancel** stops at any time.
+4. Totals show up per type and combined, every file is listed in the table (unreadable ones in red), and the CSV is written next to the script.
+
+Notes:
+
+- The **فارسی / English** button switches the whole interface — right-to-left layout included — and remembers your choice.
+- FFmpeg is found automatically. Only if it is missing does the app show a short one-time message with the install command and an optional file picker; no technical setting sits on screen.
+- You can also run `python video_duration_gui.py "D:\Movies"`.
+- Settings (last folders, language, `ffprobe` path) are stored in `%APPDATA%\video-duration-calculator\settings.json`.
+- The `.bat` + PowerShell version is unchanged and still works — the GUI is an alternative, not a replacement.
 
 ## Example Output
 
@@ -270,6 +292,7 @@ Please keep changes small, readable, and dependency-free.
 - [پیش‌نیازها](#پیشنیازها)
 - [نصب](#نصب)
 - [نحوهٔ استفاده](#نحوهٔ-استفاده)
+- [نسخهٔ گرافیکی (پایتون)](#نسخهٔ-گرافیکی-پایتون)
 - [نمونهٔ خروجی](#نمونهٔ-خروجی)
 - [فرمت‌های پشتیبانی‌شده](#فرمتهای-پشتیبانی-شده)
 - [نحوهٔ کار](#نحوهٔ-کار)
@@ -295,7 +318,8 @@ Please keep changes small, readable, and dependency-free.
 - 🧹 **بدون شمارش تکراری** — اگر پوشه‌ها هم‌پوشانی داشته باشند (مثلاً پوشه و زیرپوشه‌اش)، فایل تکراری دوبار حساب نمی‌شود.
 - 🧾 **گزارش کامل** — تعداد فایل‌های پیداشده به تفکیک نوع و تعداد مدت‌های خوانده‌شده نمایش داده می‌شود.
 - ⚠️ **مدیریت خطا** — فایل‌هایی که مدتشان خوانده نشود، فهرست می‌شوند؛ هیچ خطایی بی‌صدا رد نمی‌شود.
-- 🪶 **بدون نصب** — یک لانچر + یک اسکریپت؛ نه کامپایل، نه پایتون، نه Node.js.
+- 🖥 **نسخهٔ گرافیکی (نسخهٔ ۲٫۰)** — `video_duration_gui.py` همان کار را در یک پنجرهٔ تمیز PySide6 با کشیدن‌و‌رهاکردن پوشه، سوییچ فارسی/انگلیسی و چیدمان راست‌به‌چپ انجام می‌دهد؛ نسخهٔ کنسولی هم سر جایش است.
+- 🪶 **بدون نصب** — نسخهٔ کنسولی یک لانچر + یک اسکریپت است؛ نه کامپایل، نه پایتون، نه Node.js. (نسخهٔ گرافیکی اختیاری به پایتون ۳ + PySide6 نیاز دارد که بار اول خودکار نصب می‌شود.)
 - 🌍 **سازگار با یونیکد** — خروجی کنسول UTF-8 است تا مسیرهای فارسی/غیرانگلیسی درست نمایش داده شوند.
 
 ## پیش‌نیازها
@@ -304,6 +328,7 @@ Please keep changes small, readable, and dependency-free.
 |---|---|
 | **ویندوز ۱۰ یا ۱۱** | از `cmd.exe` و Windows PowerShell 5.1 (از پیش نصب‌شده) استفاده می‌کند. |
 | **FFmpeg (`ffprobe`)** | تنها وابستگی واقعی. نصبش کنید و مطمئن شوید `ffprobe` روی `PATH` است. |
+| **پایتون ۳٫۹+** *(فقط نسخهٔ گرافیکی)* | فقط برای `video_duration_gui.py`؛ لانچر بار اول PySide6 را نصب می‌کند. |
 
 ### نصب FFmpeg در ویندوز
 
@@ -375,6 +400,25 @@ git clone https://github.com/babak12124/video-duration-calculator.git
 ```
 
 پنجره تا فشردن یک کلید باز می‌ماند، پس نتیجه از دست نمی‌رود. هر اجرا یک گزارش CSV هم کنار اسکریپت می‌سازد (اگر آن پوشه فقط-خواندنی باشد، در `%TEMP%`).
+
+## نسخهٔ گرافیکی (پایتون)
+
+`video_duration_gui.py` همان ابزار با یک پنجره است — همان اسکن بازگشتی، همان خواندن با `ffprobe`، همان CSV — این بار با PySide6 (Qt 6). **نسخهٔ ۲٫۰.**
+
+**پیش‌نیاز:** پایتون ۳٫۹ یا بالاتر و PySide6. لازم نیست دستی چیزی نصب کنید: فایل `video_duration_gui.bat` بار اول خودش PySide6 را نصب می‌کند.
+
+1. روی `video_duration_gui.bat` دابل‌کلیک کنید — پنجرهٔ کنسول باز نمی‌شود.
+2. **افزودن پوشه…** را بزنید، یا پوشه‌ها را مستقیم روی پنجره رها کنید. بعد **ویدیو + صدا**، **فقط ویدیو** یا **فقط صدا** را انتخاب کنید.
+3. **محاسبهٔ مجموع** را بزنید. مدت‌ها در پس‌زمینه خوانده می‌شوند، پس پنجره فریز نمی‌شود؛ **لغو** هر لحظه کار را متوقف می‌کند.
+4. مجموع‌ها جدا و ترکیبی نمایش داده می‌شوند، همهٔ فایل‌ها در جدول می‌آیند (فایل‌های ناخوانا قرمز) و CSV کنار اسکریپت نوشته می‌شود.
+
+نکته‌ها:
+
+- دکمهٔ **فارسی / English** کل رابط را عوض می‌کند — همراه با چیدمان راست‌به‌چپ — و انتخاب شما را یادش می‌ماند.
+- FFmpeg خودکار پیدا می‌شود. فقط اگر نصب نباشد، برنامه یک پیام کوتاه یک‌باره با دستور نصب و امکان انتخاب فایل نشان می‌دهد؛ در حالت عادی هیچ تنظیم فنی روی صفحه نیست.
+- می‌توانید `python video_duration_gui.py "D:\Movies"` را هم اجرا کنید.
+- تنظیمات (آخرین پوشه‌ها، زبان، مسیر `ffprobe`) در `%APPDATA%\video-duration-calculator\settings.json` ذخیره می‌شود.
+- نسخهٔ `.bat` + PowerShell دست‌نخورده و سالم است — رابط گرافیکی جایگزین نیست، گزینهٔ اضافه است.
 
 ## نمونهٔ خروجی
 

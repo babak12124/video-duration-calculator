@@ -2,6 +2,7 @@
 media_durations-*.csv
 video_durations-*.csv
 video_duration-error.log
+video_duration_gui-error.log
 
 # OS / IDE
 Thumbs.db
@@ -11,3 +12,7 @@ desktop.ini
 
 # Build artifacts
 *.zip
+
+# Python
+__pycache__/
+*.pyc
