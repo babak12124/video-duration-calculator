@@ -85,6 +85,7 @@ STRINGS = {
         "col_video": "Video",
         "col_audio": "Audio",
         "col_files": "Files",
+        "col_size": "Size",
         "mode": "Count",
         "mode_both": "Video + audio",
         "mode_video": "Video only",
@@ -147,6 +148,7 @@ STRINGS = {
         "col_video": "ویدیو",
         "col_audio": "صدا",
         "col_files": "فایل‌ها",
+        "col_size": "اندازه",
         "mode": "شمارش",
         "mode_both": "ویدیو + صدا",
         "mode_video": "فقط ویدیو",
@@ -447,11 +449,23 @@ def scan_folders(folders, include: str, ffprobe: str, cancel=None, progress=None
     }
 
 
+def format_size(bytes_val: int) -> str:
+    """Format bytes to human readable string."""
+    if bytes_val >= 1024**3:
+        return f"{bytes_val / (1024**3):.2f} GB"
+    elif bytes_val >= 1024**2:
+        return f"{bytes_val / (1024**2):.2f} MB"
+    elif bytes_val >= 1024:
+        return f"{bytes_val / 1024:.2f} KB"
+    else:
+        return f"{bytes_val} B"
+
+
 def build_folder_stats(rows, roots) -> dict:
-    """Aggregate per-folder durations for the folder tree.
+    """Aggregate per-folder durations and sizes for the folder tree.
 
     Returns {root_path: node} where each node is
-    {"path", "seconds", "video_seconds", "audio_seconds", "files", "children": {path: node}}.
+    {"path", "seconds", "video_seconds", "audio_seconds", "files", "size_bytes", "children": {path: node}}.
     A node's values include everything in its subtree, so a parent shows the total.
     """
     nodes: dict[str, dict] = {}
@@ -460,7 +474,7 @@ def build_folder_stats(rows, roots) -> dict:
         key = os.path.normcase(path)
         node = nodes.get(key)
         if node is None:
-            node = {"path": path, "seconds": 0.0, "video_seconds": 0.0, "audio_seconds": 0.0, "files": 0, "children": {}}
+            node = {"path": path, "seconds": 0.0, "video_seconds": 0.0, "audio_seconds": 0.0, "files": 0, "size_bytes": 0, "children": {}}
             nodes[key] = node
         return node
 
@@ -472,6 +486,8 @@ def build_folder_stats(rows, roots) -> dict:
         parent = os.path.dirname(os.path.abspath(row["path"]))
         kind = row["kind"]
         seconds = row["seconds"]
+        size_mb = row.get("size_mb", 0.0)
+        size_bytes = int(size_mb * 1024 * 1024)
 
         root_path = None
         current = parent
@@ -496,6 +512,7 @@ def build_folder_stats(rows, roots) -> dict:
             else:
                 node["audio_seconds"] += seconds
             node["files"] += 1
+            node["size_bytes"] += size_bytes
             if os.path.normcase(current) == os.path.normcase(root_path):
                 break
             parent_dir = os.path.dirname(current)
@@ -685,7 +702,7 @@ class MainWindow(QMainWindow):
         folders_row = QHBoxLayout()
         folders_row.setSpacing(8)
         self.tree_folders = QTreeWidget()
-        self.tree_folders.setColumnCount(5)
+        self.tree_folders.setColumnCount(6)
         self.tree_folders.setFixedHeight(150)
         self.tree_folders.setRootIsDecorated(True)
         self.tree_folders.setUniformRowHeights(True)
@@ -699,10 +716,12 @@ class MainWindow(QMainWindow):
         tree_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         tree_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         tree_header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        tree_header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         self.tree_folders.setColumnWidth(1, 100)
         self.tree_folders.setColumnWidth(2, 90)
         self.tree_folders.setColumnWidth(3, 90)
         self.tree_folders.setColumnWidth(4, 70)
+        self.tree_folders.setColumnWidth(5, 100)
         self.tree_folders.itemSelectionChanged.connect(self._on_folder_selection_changed)
         folders_row.addWidget(self.tree_folders, 1)
 
@@ -918,7 +937,7 @@ class MainWindow(QMainWindow):
         self.btn_open_csv.setText(s["open_csv"])
 
         self.tree_folders.setHeaderLabels(
-            [s["col_folder"], s["col_total"], s["col_video"], s["col_audio"], s["col_files"]]
+            [s["col_folder"], s["col_total"], s["col_video"], s["col_audio"], s["col_files"], s["col_size"]]
         )
 
         self.setStyleSheet(STYLE)
@@ -993,14 +1012,15 @@ class MainWindow(QMainWindow):
             video_sec = node.get("video_seconds", 0.0)
             audio_sec = node.get("audio_seconds", 0.0)
             files = node["files"]
+            size_bytes = node.get("size_bytes", 0)
             total_str = format_hms(total_sec) if total_sec > 0 else "—"
             video_str = format_hms(video_sec) if video_sec > 0 else "—"
             audio_str = format_hms(audio_sec) if audio_sec > 0 else "—"
             files_str = str(files)
+            size_str = format_size(size_bytes) if size_bytes > 0 else "—"
         else:
-            total_str = video_str = audio_str = "—"
-            files_str = ""
-        item = QTreeWidgetItem([label, total_str, video_str, audio_str, files_str])
+            total_str = video_str = audio_str = files_str = size_str = "—"
+        item = QTreeWidgetItem([label, total_str, video_str, audio_str, files_str, size_str])
         item.setToolTip(0, path)
         item.setIcon(0, icon)
         item.setData(0, Qt.ItemDataRole.UserRole, path)
@@ -1008,10 +1028,11 @@ class MainWindow(QMainWindow):
         item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
         item.setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
         item.setTextAlignment(4, Qt.AlignmentFlag.AlignCenter)
+        item.setTextAlignment(5, Qt.AlignmentFlag.AlignCenter)
         if top:
             font = item.font(0)
             font.setBold(True)
-            for column in range(5):
+            for column in range(6):
                 item.setFont(column, font)
         if node:
             children = sorted(
