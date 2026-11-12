@@ -605,6 +605,7 @@ class MainWindow(QMainWindow):
 
         self.folders: list[str] = []
         self.rows: list[dict] = []
+        self.folder_stats: dict | None = None
         self.scanned_folders = 0
         self.totals = {"Video": 0.0, "Audio": 0.0}
         self.counts = {"Video": {"found": 0, "read": 0}, "Audio": {"found": 0, "read": 0}}
@@ -902,7 +903,7 @@ class MainWindow(QMainWindow):
         self.btn_open_csv.setText(s["open_csv"])
 
         self.setStyleSheet(STYLE)
-        self._refresh_folder_list()
+        self._refresh_folder_tree()
         self._refresh_totals()
         self._refresh_summary()
         self._refresh_table()
@@ -1086,7 +1087,7 @@ class MainWindow(QMainWindow):
                 self.s["missing_folders"].format(paths="\n".join(missing)),
             )
             self.folders = [folder for folder in self.folders if os.path.isdir(folder)]
-            self._refresh_folder_list()
+            self._refresh_folder_tree()
             if not self.folders:
                 return
 
