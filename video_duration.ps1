@@ -33,7 +33,7 @@ $Include = 'Both'
 $pathInputs = @()
 
 $ErrorActionPreference = 'Stop'
-$script:Version = '2.5.0'
+$script:Version = '2.5.1'
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 

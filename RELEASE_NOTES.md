@@ -1,3 +1,21 @@
+## Video & Audio Duration Calculator v2.5.1 — Linux build fixed
+
+### What's fixed
+- **Linux build works again** — the workflow asked apt for `libxcb-xinerama1`, a package that has never existed (the real name is `libxcb-xinerama0`), so `apt-get` aborted with exit code 100 before PyInstaller ever ran
+- **Runner pinned to `ubuntu-24.04`** — `ubuntu-latest` moved to 26.04, which also produced binaries that need a newer glibc than most users have
+- **Package list is filtered before install** — a package that gets renamed or dropped in a future runner image is skipped with a warning instead of failing the whole job
+- **Binary verified before upload** — the release job now checks that the Linux ELF file exists and is executable
+
+### Linux runtime requirements
+- `ffmpeg` (provides `ffprobe`) and `libxcb-cursor0`, e.g. `sudo apt install ffmpeg libxcb-cursor0`
+
+### فارسی
+- **ساخت لینوکس درست شد** — نام بستهٔ اشتباه `libxcb-xinerama1` به `libxcb-xinerama0` اصلاح شد و بیلد دیگر پیش از شروع روی `apt-get` نمی‌افتد.
+- بیلد روی `ubuntu-24.04` قفل شد تا باینری روی اوبونتو ۲۴.۰۴ و جدیدتر اجرا شود.
+- برای اجرا در لینوکس: `sudo apt install ffmpeg libxcb-cursor0`.
+
+---
+
 ## Video & Audio Duration Calculator v2.5.0 — desktop app + cross-platform builds
 
 ### What's new

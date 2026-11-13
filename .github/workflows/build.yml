@@ -202,6 +202,9 @@ jobs:
               - Windows: `winget install Gyan.FFmpeg`
               - Linux: `sudo apt install ffmpeg` / `sudo dnf install ffmpeg`
               - macOS: `brew install ffmpeg`
+            - **Linux desktop libraries**: `libxcb-cursor0` is required by Qt 6
+              - Debian/Ubuntu: `sudo apt install libxcb-cursor0`
+              - Fedora: `sudo dnf install xcb-util-cursor`
           files: |
             release/video-duration-calculator-${{ github.ref_name }}-windows.exe
             release/video-duration-calculator-${{ github.ref_name }}-linux

@@ -54,7 +54,7 @@ from PySide6.QtWidgets import (
 )
 
 APP_NAME = "Video & Audio Duration Calculator"
-APP_VERSION = "2.5.0"
+APP_VERSION = "2.5.1"
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 VIDEO_EXTENSIONS = {
